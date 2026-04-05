@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiAbs Klinik — Sistem Absensi</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --card: #1a2235;
+    --border: #243049;
+    --accent: #00d4aa;
+    --accent2: #ff6b6b;
+    --accent3: #ffd166;
+    --text: #e8edf5;
+    --muted: #6b7a99;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== BACKGROUND MESH ===== */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 10% 20%, rgba(0,212,170,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 90% 80%, rgba(99,102,241,0.07) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; }
+
+  /* ===== HEADER ===== */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(17,24,39,0.85);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo-icon {
+    width:36px; height:36px;
+    background: linear-gradient(135deg, var(--accent), #6366f1);
+    border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+  }
+  .logo-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; letter-spacing:-0.5px; }
+  .logo-text span { color: var(--accent); }
+  .header-time {
+    text-align:right;
+    font-size:13px; color:var(--muted);
+  }
+  .header-time strong { display:block; font-size:22px; font-weight:700; color:var(--text); font-variant-numeric: tabular-nums; }
+
+  /* ===== NAV TABS ===== */
+  .nav-tabs {
+    display:flex; gap:4px;
+    padding: 16px 32px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-family: inherit; font-size:14px; font-weight:600;
+    padding: 10px 20px;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); background: rgba(0,212,170,0.05); }
+  .tab-btn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.04); }
+
+  /* ===== PAGES ===== */
+  .page { display:none; padding:28px 32px; }
+  .page.active { display:block; }
+
+  /* ===== GRID ===== */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+  }
+  .card-title {
+    font-size:12px; font-weight:700; text-transform:uppercase;
+    letter-spacing:1.2px; color:var(--muted); margin-bottom:16px;
+  }
+  .stat-value { font-family:'Syne',sans-serif; font-size:36px; font-weight:800; line-height:1; }
+  .stat-sub { font-size:12px; color:var(--muted); margin-top:6px; }
+
+  /* ===== STAT CARDS ===== */
+  .stat-card { display:flex; flex-direction:column; gap:8px; }
+  .stat-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11px; font-weight:700; padding:3px 9px;
+    border-radius:99px; width:fit-content;
+  }
+  .chip-green { background:rgba(16,185,129,0.15); color:#10b981; }
+  .chip-red   { background:rgba(239,68,68,0.15);  color:#ef4444; }
+  .chip-yellow{ background:rgba(245,158,11,0.15); color:#f59e0b; }
+  .chip-blue  { background:rgba(99,102,241,0.15); color:#818cf8; }
+
+  /* ===== CAMERA SECTION ===== */
+  .camera-wrap {
+    position:relative; border-radius:16px; overflow:hidden;
+    background:#000; aspect-ratio:4/3;
+    border: 2px solid var(--border);
+  }
+  #cameraFeed {
+    width:100%; height:100%; object-fit:cover; display:block;
+    transform: scaleX(-1);
+  }
+  .camera-overlay {
+    position:absolute; inset:0;
+    background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.7));
+    display:flex; align-items:flex-end; padding:16px;
+  }
+  .camera-badge {
+    display:flex; align-items:center; gap:6px;
+    background:rgba(0,0,0,0.6); backdrop-filter:blur(8px);
+    border-radius:99px; padding:5px 12px;
+    font-size:12px; font-weight:600;
+  }
+  .live-dot {
+    width:8px; height:8px; border-radius:50%; background:var(--red);
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .camera-corner {
+    position:absolute; width:20px; height:20px;
+    border-color: var(--accent); border-style:solid;
+  }
+  .corner-tl { top:12px; left:12px; border-width:2px 0 0 2px; }
+  .corner-tr { top:12px; right:12px; border-width:2px 2px 0 0; }
+  .corner-bl { bottom:12px; left:12px; border-width:0 0 2px 2px; }
+  .corner-br { bottom:12px; right:12px; border-width:0 2px 2px 0; }
+
+  /* ===== SNAP PREVIEW ===== */
+  #snapCanvas { display:none; }
+  #snapPreview {
+    width:100%; border-radius:12px; overflow:hidden;
+    border:2px solid var(--accent); display:none;
+  }
+  #snapPreview img { width:100%; display:block; transform:scaleX(-1); }
+
+  /* ===== FORM ===== */
+  .form-group { margin-bottom:14px; }
+  label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.8px; }
+  select, input {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); font-family:inherit; font-size:14px;
+    padding:10px 14px; border-radius:10px;
+    outline:none; transition:border-color 0.2s;
+  }
+  select:focus, input:focus { border-color:var(--accent); }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    font-family:inherit; font-weight:700; font-size:14px;
+    padding:11px 22px; border-radius:10px;
+    border:none; cursor:pointer; transition:all 0.2s;
+  }
+  .btn-primary { background:var(--accent); color:#0a0f1e; }
+  .btn-primary:hover { background:#00f0c0; transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,212,170,0.3); }
+  .btn-danger  { background:var(--red); color:#fff; }
+  .btn-danger:hover { background:#ff6060; }
+  .btn-ghost   { background:rgba(255,255,255,0.06); color:var(--text); border:1px solid var(--border); }
+  .btn-ghost:hover { background:rgba(255,255,255,0.1); }
+  .btn-full { width:100%; }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; transform:none !important; }
+
+  /* ===== STATUS ALERT ===== */
+  .alert {
+    border-radius:12px; padding:14px 18px;
+    font-size:14px; font-weight:600; display:none;
+    align-items:center; gap:10px; margin-top:14px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from{transform:translateY(-8px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .alert.show { display:flex; }
+  .alert-success { background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#10b981; }
+  .alert-warning { background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; }
+  .alert-error   { background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; }
+
+  /* ===== TABLE ===== */
+  .table-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th {
+    background:var(--surface); color:var(--muted); font-size:11px;
+    text-transform:uppercase; letter-spacing:.8px; font-weight:700;
+    padding:12px 16px; text-align:left; white-space:nowrap;
+  }
+  td { padding:12px 16px; border-top:1px solid var(--border); vertical-align:middle; }
+  tr:hover td { background:rgba(255,255,255,0.025); }
+  .badge {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11px; font-weight:700; padding:3px 10px; border-radius:99px;
+  }
+  .badge-on-time  { background:rgba(16,185,129,0.15);  color:#10b981; }
+  .badge-late-1   { background:rgba(245,158,11,0.15);  color:#f59e0b; }
+  .badge-late-2   { background:rgba(239,68,68,0.15);   color:#ef4444; }
+  .badge-absent   { background:rgba(107,114,153,0.15); color:#6b7a99; }
+  .avatar {
+    width:32px; height:32px; border-radius:50%;
+    background: linear-gradient(135deg, var(--accent), #6366f1);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800; color:#0a0f1e;
+    flex-shrink:0;
+  }
+  .name-cell { display:flex; align-items:center; gap:10px; }
+
+  /* ===== PROGRESS BAR ===== */
+  .progress-wrap { background:var(--border); border-radius:99px; height:6px; overflow:hidden; margin-top:8px; }
+  .progress-bar  { height:100%; border-radius:99px; transition:width 0.4s; }
+
+  /* ===== TUNJANGAN CARD ===== */
+  .tunj-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 0; border-bottom:1px solid var(--border);
+  }
+  .tunj-row:last-child { border-bottom:none; }
+  .tunj-name { font-weight:600; font-size:14px; }
+  .tunj-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+  .tunj-amount { text-align:right; }
+  .tunj-base { font-size:13px; color:var(--muted); text-decoration:line-through; }
+  .tunj-final { font-size:16px; font-weight:800; color:var(--accent); }
+  .tunj-cut { font-size:11px; color:var(--red); font-weight:600; }
+
+  /* ===== PHOTO THUMB ===== */
+  .photo-thumb {
+    width:40px; height:40px; border-radius:8px; object-fit:cover;
+    border:2px solid var(--border); cursor:pointer;
+    transition:transform 0.2s;
+  }
+  .photo-thumb:hover { transform:scale(1.1); }
+
+  /* ===== MODAL ===== */
+  .modal-bg {
+    position:fixed; inset:0; background:rgba(0,0,0,0.8);
+    display:none; align-items:center; justify-content:center;
+    z-index:999; backdrop-filter:blur(6px);
+  }
+  .modal-bg.show { display:flex; }
+  .modal {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:20px; padding:28px; max-width:420px; width:90%;
+    animation: popIn 0.25s ease;
+  }
+  @keyframes popIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+  .modal img { width:100%; border-radius:12px; transform:scaleX(-1); }
+  .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; margin-bottom:16px; }
+  .modal-close {
+    margin-top:16px; width:100%;
+    background:var(--surface); border:1px solid var(--border);
+    color:var(--muted); font-family:inherit; font-size:14px;
+    padding:10px; border-radius:10px; cursor:pointer;
+  }
+  .modal-close:hover { color:var(--text); }
+
+  /* ===== SETTINGS ===== */
+  .settings-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 0; border-bottom:1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom:none; }
+  .settings-label { font-weight:600; font-size:14px; }
+  .settings-desc { font-size:12px; color:var(--muted); margin-top:3px; }
+  .settings-input { width:140px; }
+
+  /* ===== TOGGLE ===== */
+  .toggle-wrap { display:flex; align-items:center; gap:10px; }
+  .toggle {
+    position:relative; width:44px; height:24px;
+    background:var(--border); border-radius:99px; cursor:pointer;
+    transition:background 0.2s;
+  }
+  .toggle.on { background:var(--accent); }
+  .toggle::after {
+    content:''; position:absolute;
+    width:18px; height:18px; border-radius:50%;
+    background:#fff; top:3px; left:3px;
+    transition:transform 0.2s;
+  }
+  .toggle.on::after { transform:translateX(20px); }
+
+  /* ===== RESPONSIVE ===== */
+  @media(max-width:768px){
+    .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr; }
+    .nav-tabs { overflow-x:auto; }
+    header { padding:14px 16px; }
+    .page { padding:16px; }
+  }
+
+  .section-title {
+    font-family:'Syne',sans-serif; font-size:22px; font-weight:800;
+    margin-bottom:20px; letter-spacing:-0.5px;
+  }
+  .section-subtitle { color:var(--muted); font-size:13px; margin-top:4px; }
+
+  .separator { height:1px; background:var(--border); margin:24px 0; }
+
+  .empty-state {
+    text-align:center; padding:40px; color:var(--muted);
+  }
+  .empty-state .icon { font-size:36px; margin-bottom:12px; }
+  .empty-state p { font-size:14px; }
+
+  .time-display {
+    font-family:'Syne',sans-serif; font-size:48px; font-weight:800;
+    color:var(--accent); text-align:center; letter-spacing:-2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .date-display { text-align:center; color:var(--muted); font-size:14px; margin-top:4px; }
+
+  .late-meter {
+    display:flex; align-items:center; gap:10px; margin-top:8px;
+  }
+  .late-meter-bar {
+    flex:1; height:8px; background:var(--border); border-radius:99px; overflow:hidden;
+  }
+  .late-meter-fill {
+    height:100%; background:linear-gradient(90deg, var(--green), var(--yellow), var(--red));
+    border-radius:99px; transition:width 0.3s;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏥</div>
+    <span class="logo-text">Si<span>Abs</span> Klinik</span>
+  </div>
+  <div class="header-time">
+    <span>Waktu Sekarang</span>
+    <strong id="headerClock">--:--:--</strong>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="nav-tabs">
+  <button class="tab-btn active" onclick="switchTab('absen')">📷 Absensi</button>
+  <button class="tab-btn" onclick="switchTab('rekap')">📋 Rekap Harian</button>
+  <button class="tab-btn" onclick="switchTab('pegawai')">👥 Data Pegawai</button>
+  <button class="tab-btn" onclick="switchTab('tunjangan')">💰 Tunjangan</button>
+  <button class="tab-btn" onclick="switchTab('pengaturan')">⚙️ Pengaturan</button>
+</div>
+
+<!-- ==================== TAB: ABSENSI ==================== -->
+<div class="page active" id="tab-absen">
+  <div class="grid-2" style="align-items:start">
+
+    <!-- Kiri: Kamera -->
+    <div>
+      <div class="section-title">Absensi Live 📷
+        <div class="section-subtitle">Foto langsung dari kamera — tidak bisa dimanipulasi</div>
+      </div>
+
+      <div class="camera-wrap">
+        <video id="cameraFeed" autoplay playsinline muted></video>
+        <div class="camera-overlay">
+          <div class="camera-badge">
+            <div class="live-dot"></div>
+            LIVE CAMERA
+          </div>
+        </div>
+        <div class="camera-corner corner-tl"></div>
+        <div class="camera-corner corner-tr"></div>
+        <div class="camera-corner corner-bl"></div>
+        <div class="camera-corner corner-br"></div>
+      </div>
+
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button class="btn btn-ghost" id="btnStartCam" onclick="startCamera()">▶ Aktifkan Kamera</button>
+        <button class="btn btn-primary" id="btnSnap" onclick="takePhoto()" disabled>📸 Ambil Foto</button>
+      </div>
+
+      <canvas id="snapCanvas"></canvas>
+      <div id="snapPreview" style="margin-top:12px;">
+        <img id="snapImg" src="" alt="Foto absen">
+      </div>
+    </div>
+
+    <!-- Kanan: Form -->
+    <div>
+      <div class="section-title">Data Absensi</div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div class="time-display" id="absenClock">--:--:--</div>
+        <div class="date-display" id="absenDate">Memuat tanggal...</div>
+      </div>
+
+      <div class="card">
+        <div class="form-group">
+          <label>Pilih Pegawai</label>
+          <select id="selPegawai">
+            <option value="">-- Pilih Nama Pegawai --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Pilih Shift</label>
+          <select id="selShift" onchange="updateLiveStatus()">
+            <option value="pagi">🌅 Shift Pagi — Masuk 07:00</option>
+            <option value="siang">☀️ Shift Siang — Masuk 14:00</option>
+            <option value="malam">🌙 Shift Malam — Masuk 20:00</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Jenis Absen</label>
+          <select id="selJenis">
+            <option value="masuk">Masuk</option>
+            <option value="pulang">Pulang</option>
+          </select>
+        </div>
+
+        <div id="previewStatus" style="display:none; margin-bottom:14px;">
+          <div class="card" style="background:var(--surface); padding:14px;">
+            <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">STATUS KEDATANGAN</div>
+            <div id="statusText" style="font-size:16px; font-weight:700;"></div>
+            <div class="late-meter">
+              <div class="late-meter-bar"><div class="late-meter-fill" id="lateMeterFill" style="width:0%"></div></div>
+              <span id="lateMeterLabel" style="font-size:12px; color:var(--muted); white-space:nowrap;"></span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="btnAbsen" onclick="submitAbsen()" disabled>
+          ✅ Catat Absensi
+        </button>
+
+        <div class="alert alert-success" id="alertSuccess">
+          <span>✅</span> <span id="alertMsg">Absensi berhasil dicatat!</span>
+        </div>
+        <div class="alert alert-warning" id="alertWarning">
+          <span>⚠️</span> <span id="alertWarnMsg">Peringatan keterlambatan!</span>
+        </div>
+        <div class="alert alert-error" id="alertError">
+          <span>❌</span> <span id="alertErrMsg">Terjadi kesalahan.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB: REKAP HARIAN ==================== -->
+<div class="page" id="tab-rekap">
+  <div class="section-title">Rekap Absensi Harian
+    <div class="section-subtitle">Semua catatan masuk/pulang beserta foto bukti</div>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:24px;">
+    <div class="card stat-card">
+      <div class="card-title">Total Hadir</div>
+      <div class="stat-value" id="statHadir" style="color:var(--accent)">0</div>
+      <div class="stat-sub">dari <span id="statTotal">0</span> pegawai</div>
+    </div>
+    <div class="card stat-card">
+      <div class="card-title">Tepat Waktu</div>
+      <div class="stat-value" id="statOnTime" style="color:var(--green)">0</div>
+      <div class="progress-wrap"><div class="progress-bar" id="barOnTime" style="width:0%;background:var(--green)"></div></div>
+    </div>
+    <div class="card stat-card">
+      <div class="card-title">Terlambat</div>
+      <div class="stat-value" id="statLate" style="color:var(--yellow)">0</div>
+      <div class="progress-wrap"><div class="progress-bar" id="barLate" style="width:0%;background:var(--yellow)"></div></div>
+    </div>
+    <div class="card stat-card">
+      <div class="card-title">Belum Absen</div>
+      <div class="stat-value" id="statAbsent" style="color:var(--red)">0</div>
+      <div class="progress-wrap"><div class="progress-bar" id="barAbsent" style="width:0%;background:var(--red)"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <div class="card-title" style="margin:0">Log Absensi Hari Ini</div>
+      <div style="display:flex; gap:8px;">
+        <input type="date" id="filterDate" style="width:auto" onchange="renderRekap()">
+        <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Pegawai</th>
+            <th>Shift</th>
+            <th>Waktu</th>
+            <th>Jenis</th>
+            <th>Status</th>
+            <th>Terlambat</th>
+            <th>Foto Bukti</th>
+          </tr>
+        </thead>
+        <tbody id="tableRekap">
+          <tr><td colspan="6"><div class="empty-state"><div class="icon">📭</div><p>Belum ada data absensi hari ini</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB: PEGAWAI ==================== -->
+<div class="page" id="tab-pegawai">
+  <div class="section-title">Data Pegawai
+    <div class="section-subtitle">Rekap keterlambatan & statistik per pegawai</div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">Tambah Pegawai Baru</div>
+    <div class="grid-3" style="align-items:end;">
+      <div class="form-group" style="margin:0">
+        <label>Nama Lengkap</label>
+        <input type="text" id="inpNamaPegawai" placeholder="cth. Siti Rahayu">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Jabatan</label>
+        <input type="text" id="inpJabatan" placeholder="cth. Perawat">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Tunjangan/Bulan (Rp)</label>
+        <input type="number" id="inpTunjangan" placeholder="cth. 500000">
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="tambahPegawai()">+ Tambah Pegawai</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Daftar Pegawai & Rekap Keterlambatan</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Jabatan</th>
+            <th>Total Terlambat</th>
+            <th>Terlambat Bulan Ini</th>
+            <th>Tunjangan</th>
+            <th>Potongan</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="tablePegawai">
+          <tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>Belum ada pegawai terdaftar</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB: TUNJANGAN ==================== -->
+<div class="page" id="tab-tunjangan">
+  <div class="section-title">Kalkulasi Tunjangan
+    <div class="section-subtitle">Potongan otomatis berdasarkan jumlah keterlambatan bulan ini</div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px; background: linear-gradient(135deg, rgba(0,212,170,0.1), rgba(99,102,241,0.1)); border-color:rgba(0,212,170,0.3);">
+    <div class="card-title">Aturan Potongan Aktif</div>
+    <div class="grid-3">
+      <div>
+        <div style="font-size:12px;color:var(--muted)">Terlambat 1–2x</div>
+        <div style="font-size:20px;font-weight:800;color:var(--yellow)" id="infoPotongan1">25%</div>
+        <div style="font-size:12px;color:var(--muted)">dari tunjangan</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--muted)">Terlambat 3–4x</div>
+        <div style="font-size:20px;font-weight:800;color:var(--accent2)" id="infoPotongan2">50%</div>
+        <div style="font-size:12px;color:var(--muted)">dari tunjangan</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--muted)">Terlambat ≥5x</div>
+        <div style="font-size:20px;font-weight:800;color:var(--red)" id="infoPotongan3">100%</div>
+        <div style="font-size:12px;color:var(--muted)">dari tunjangan</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Rincian Tunjangan Bulan Ini</div>
+    <div id="listTunjangan">
+      <div class="empty-state"><div class="icon">💰</div><p>Belum ada data pegawai</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB: PENGATURAN ==================== -->
+<div class="page" id="tab-pengaturan">
+  <div class="section-title">Pengaturan Sistem</div>
+
+  <div class="card">
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Jam Masuk Shift</div>
+        <div class="settings-desc">🌅 Pagi: 07:00 &nbsp;|&nbsp; ☀️ Siang: 14:00 &nbsp;|&nbsp; 🌙 Malam: 20:00</div>
+      </div>
+      <span style="font-size:13px;color:var(--accent);font-weight:700">Otomatis per shift</span>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Toleransi Keterlambatan</div>
+        <div class="settings-desc">Menit grace period sebelum dihitung terlambat</div>
+      </div>
+      <input type="number" class="settings-input" id="setToleransi" value="10" min="0" max="30" onchange="saveSettings()">
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Potongan Terlambat 1–2x</div>
+        <div class="settings-desc">Persentase potongan tunjangan</div>
+      </div>
+      <input type="number" class="settings-input" id="setPotongan1" value="25" min="0" max="100" onchange="saveSettings()">
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Potongan Terlambat 3–4x</div>
+        <div class="settings-desc">Persentase potongan tunjangan</div>
+      </div>
+      <input type="number" class="settings-input" id="setPotongan2" value="50" min="0" max="100" onchange="saveSettings()">
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Potongan Terlambat ≥5x</div>
+        <div class="settings-desc">Persentase potongan tunjangan</div>
+      </div>
+      <input type="number" class="settings-input" id="setPotongan3" value="100" min="0" max="100" onchange="saveSettings()">
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Reset Data Bulanan</div>
+        <div class="settings-desc">Hapus semua catatan keterlambatan bulan ini</div>
+      </div>
+      <button class="btn btn-danger" onclick="resetBulanan()">🗑 Reset Bulan Ini</button>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Reset Semua Data</div>
+        <div class="settings-desc">Hapus semua data pegawai & absensi (hati-hati!)</div>
+      </div>
+      <button class="btn btn-danger" onclick="resetAll()">⚠️ Reset Total</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+
+<!-- MODAL FOTO -->
+<div class="modal-bg" id="modalFoto">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Foto Absensi</div>
+    <img id="modalImg" src="" alt="">
+    <div id="modalInfo" style="margin-top:12px; font-size:13px; color:var(--muted);"></div>
+    <button class="modal-close" onclick="closeModal()">Tutup</button>
+  </div>
+</div>
+
+<script>
+// ==================== STATE ====================
+let state = {
+  pegawai: [],
+  absensi: [],
+  settings: {
+    jamMasuk: '07:00',
+    toleransi: 10,
+    potongan1: 25,
+    potongan2: 50,
+    potongan3: 100
+  }
+};
+
+let stream = null;
+let currentPhoto = null;
+
+// ==================== INIT ====================
+function init() {
+  loadState();
+  applySettings();
+  renderSelPegawai();
+  renderPegawai();
+  renderRekap();
+  renderTunjangan();
+  startClock();
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('filterDate').value = today;
+  renderRekap();
+}
+
+const DEFAULT_PEGAWAI = [
+  {id:'1001', nama:'Leni',   jabatan:'Asisten Apotek',   tunjangan:200000, inisial:'LE', totalTerlambat:0, terlambatBulanIni:0},
+  {id:'1002', nama:'Hyari',  jabatan:'Asisten Apoteker', tunjangan:100000, inisial:'HY', totalTerlambat:0, terlambatBulanIni:0},
+  {id:'1003', nama:'Shelly', jabatan:'Bidan',             tunjangan:100000, inisial:'SH', totalTerlambat:0, terlambatBulanIni:0},
+  {id:'1004', nama:'Dhea',   jabatan:'Perawat',           tunjangan:100000, inisial:'DH', totalTerlambat:0, terlambatBulanIni:0},
+  {id:'1005', nama:'Siska',  jabatan:'Perawat',           tunjangan:0,      inisial:'SI', totalTerlambat:0, terlambatBulanIni:0},
+  {id:'1006', nama:'Ade',    jabatan:'Analis Lab',        tunjangan:0,      inisial:'AD', totalTerlambat:0, terlambatBulanIni:0}
+];
+
+function loadState() {
+  const saved = localStorage.getItem('siabs_state');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      state = { ...state, ...parsed };
+    } catch(e) { /* korup, abaikan */ }
+  }
+  if (!state.settings) state.settings = { jamMasuk:'07:00', toleransi:10, potongan1:25, potongan2:50, potongan3:100 };
+  // Dedup pegawai — jika nama sama, ambil yang terakhir
+  if (state.pegawai && state.pegawai.length > 0) {
+    const seen = {};
+    // Iterasi dari belakang supaya yang terakhir dipertahankan
+    const reversed = [...state.pegawai].reverse();
+    const deduped = [];
+    reversed.forEach(p => {
+      const key = p.nama.trim().toLowerCase();
+      if (!seen[key]) { seen[key] = true; deduped.push(p); }
+    });
+    state.pegawai = deduped.reverse();
+  }
+  // Pastikan pegawai default selalu ada
+  if (!state.pegawai || state.pegawai.length === 0) state.pegawai = [...DEFAULT_PEGAWAI];
+  saveState();
+  document.getElementById('setToleransi').value = state.settings.toleransi;
+  document.getElementById('setPotongan1').value = state.settings.potongan1;
+  document.getElementById('setPotongan2').value = state.settings.potongan2;
+  document.getElementById('setPotongan3').value = state.settings.potongan3;
+}
+
+function saveState() {
+  localStorage.setItem('siabs_state', JSON.stringify(state));
+}
+
+function saveSettings() {
+  state.settings.jamMasuk  = document.getElementById('setJamMasuk').value;
+  state.settings.toleransi = parseInt(document.getElementById('setToleransi').value) || 5;
+  state.settings.potongan1 = parseInt(document.getElementById('setPotongan1').value) || 25;
+  state.settings.potongan2 = parseInt(document.getElementById('setPotongan2').value) || 50;
+  state.settings.potongan3 = parseInt(document.getElementById('setPotongan3').value) || 100;
+  saveState();
+  applySettings();
+  renderTunjangan();
+}
+
+function applySettings() {
+  document.getElementById('infoPotongan1').textContent = state.settings.potongan1 + '%';
+  document.getElementById('infoPotongan2').textContent = state.settings.potongan2 + '%';
+  document.getElementById('infoPotongan3').textContent = state.settings.potongan3 + '%';
+}
+
+// ==================== CLOCK ====================
+function startClock() {
+  function tick() {
+    const now = new Date();
+    const t = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const d = now.toLocaleDateString('id-ID', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    document.getElementById('headerClock').textContent = t;
+    document.getElementById('absenClock').textContent = t;
+    document.getElementById('absenDate').textContent = d;
+    updateLiveStatus();
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+function updateLiveStatus() {
+  const sel = document.getElementById('selPegawai');
+  const jenis = document.getElementById('selJenis').value;
+  if (!sel.value || jenis !== 'masuk') {
+    document.getElementById('previewStatus').style.display = 'none';
+    return;
+  }
+  const {status, menit} = getStatus();
+  const preview = document.getElementById('previewStatus');
+  preview.style.display = 'block';
+  const txt = document.getElementById('statusText');
+  const fill = document.getElementById('lateMeterFill');
+  const label = document.getElementById('lateMeterLabel');
+  if (status === 'ontime') {
+    txt.style.color = '#10b981';
+    txt.textContent = '✅ Tepat Waktu';
+    fill.style.width = '5%';
+    label.textContent = 'Tepat waktu';
+  } else {
+    const pct = Math.min(100, (menit / 60) * 100);
+    txt.style.color = menit <= 30 ? '#f59e0b' : '#ef4444';
+    txt.textContent = `⏰ Terlambat ${menit} menit`;
+    fill.style.width = pct + '%';
+    label.textContent = menit + ' menit';
+  }
+}
+
+const SHIFT_JAM = { pagi: '07:00', siang: '14:00', malam: '20:00' };
+const SHIFT_LABEL = { pagi: '🌅 Pagi', siang: '☀️ Siang', malam: '🌙 Malam' };
+
+function getShift() {
+  const sel = document.getElementById('selShift');
+  return sel ? sel.value : 'pagi';
+}
+
+function getStatus(shiftOverride) {
+  const shift = shiftOverride || getShift();
+  const jamMasuk = SHIFT_JAM[shift] || state.settings.jamMasuk;
+  const now = new Date();
+  const [jH, jM] = jamMasuk.split(':').map(Number);
+  const batas = new Date(now);
+  batas.setHours(jH, jM + parseInt(state.settings.toleransi), 0, 0);
+  if (now <= batas) return {status:'ontime', menit:0};
+  const diff = Math.floor((now - batas) / 60000);
+  return {status:'late', menit: diff + parseInt(state.settings.toleransi)};
+}
+
+// ==================== CAMERA ====================
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio:false });
+    document.getElementById('cameraFeed').srcObject = stream;
+    document.getElementById('btnSnap').disabled = false;
+    document.getElementById('btnStartCam').textContent = '✅ Kamera Aktif';
+    document.getElementById('btnStartCam').disabled = true;
+  } catch(e) {
+    showAlert('error', '❌ Tidak bisa mengakses kamera: ' + e.message);
+  }
+}
+
+function takePhoto() {
+  const video = document.getElementById('cameraFeed');
+  const canvas = document.getElementById('snapCanvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+
+  // Timestamp watermark
+  ctx.save();
+  ctx.scale(-1, 1);
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  const now = new Date();
+  const ts = now.toLocaleString('id-ID');
+  const tw = ctx.measureText(ts).width;
+  ctx.fillRect(-canvas.width + 10, canvas.height - 40, tw + 20, 30);
+  ctx.fillStyle = '#00d4aa';
+  ctx.fillText(ts, -canvas.width + 20, canvas.height - 18);
+  ctx.restore();
+
+  currentPhoto = canvas.toDataURL('image/jpeg', 0.85);
+  const img = document.getElementById('snapImg');
+  img.src = currentPhoto;
+  document.getElementById('snapPreview').style.display = 'block';
+  document.getElementById('btnAbsen').disabled = false;
+  showAlert('success', '📸 Foto berhasil diambil! Klik "Catat Absensi" untuk menyimpan.');
+}
+
+// ==================== ABSENSI ====================
+function submitAbsen() {
+  const pegId = document.getElementById('selPegawai').value;
+  const jenis = document.getElementById('selJenis').value;
+  const shift = getShift();
+
+  if (!pegId) { showAlert('error', 'Pilih nama pegawai terlebih dahulu!'); return; }
+  if (!currentPhoto) { showAlert('error', 'Ambil foto terlebih dahulu!'); return; }
+
+  const now = new Date();
+  const peg = state.pegawai.find(p => p.id === pegId);
+  const {status, menit} = getStatus(shift);
+
+  // Cek duplikat hari ini per shift
+  const today = now.toISOString().split('T')[0];
+  const existing = state.absensi.find(a =>
+    a.pegawaiId === pegId && a.jenis === jenis &&
+    a.shift === shift && a.waktu.startsWith(today)
+  );
+  if (existing) {
+    showAlert('error', `${peg.nama} sudah absen ${jenis} untuk ${SHIFT_LABEL[shift]} hari ini!`);
+    return;
+  }
+
+  const rec = {
+    id: Date.now().toString(),
+    pegawaiId: pegId,
+    nama: peg.nama,
+    jabatan: peg.jabatan,
+    jenis,
+    shift,
+    waktu: now.toISOString(),
+    status: jenis === 'masuk' ? status : 'ontime',
+    menitTerlambat: jenis === 'masuk' ? menit : 0,
+    foto: currentPhoto,
+    bulan: today.substring(0, 7)
+  };
+
+  state.absensi.push(rec);
+
+  // Update counter keterlambatan pegawai
+  if (jenis === 'masuk' && status === 'late') {
+    peg.totalTerlambat = (peg.totalTerlambat || 0) + 1;
+    peg.terlambatBulanIni = (peg.terlambatBulanIni || 0) + 1;
+    saveState();
+    const warn = `⚠️ ${peg.nama} TERLAMBAT ${menit} menit! Total bulan ini: ${peg.terlambatBulanIni}x`;
+    showAlert('warning', warn);
+  } else {
+    saveState();
+    showAlert('success', `✅ Absensi ${jenis} ${peg.nama} berhasil dicatat!`);
+  }
+
+  currentPhoto = null;
+  document.getElementById('snapPreview').style.display = 'none';
+  document.getElementById('btnAbsen').disabled = true;
+  renderRekap();
+  renderPegawai();
+  renderTunjangan();
+  updateStats();
+}
+
+// ==================== PEGAWAI ====================
+function tambahPegawai() {
+  const nama = document.getElementById('inpNamaPegawai').value.trim();
+  const jabatan = document.getElementById('inpJabatan').value.trim();
+  const tunjangan = parseInt(document.getElementById('inpTunjangan').value) || 0;
+  if (!nama) { alert('Nama pegawai wajib diisi!'); return; }
+
+  const inisial = nama.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2);
+  state.pegawai.push({
+    id: Date.now().toString(),
+    nama, jabatan, tunjangan, inisial,
+    totalTerlambat: 0,
+    terlambatBulanIni: 0
+  });
+  saveState();
+  renderSelPegawai();
+  renderPegawai();
+  renderTunjangan();
+  document.getElementById('inpNamaPegawai').value = '';
+  document.getElementById('inpJabatan').value = '';
+  document.getElementById('inpTunjangan').value = '';
+}
+
+function hapusPegawai(id) {
+  if (!confirm('Yakin hapus pegawai ini?')) return;
+  state.pegawai = state.pegawai.filter(p => p.id !== id);
+  state.absensi = state.absensi.filter(a => a.pegawaiId !== id);
+  saveState();
+  renderSelPegawai();
+  renderPegawai();
+  renderTunjangan();
+  renderRekap();
+}
+
+function renderSelPegawai() {
+  const sel = document.getElementById('selPegawai');
+  sel.innerHTML = '<option value="">-- Pilih Nama Pegawai --</option>';
+  state.pegawai.forEach(p => {
+    sel.innerHTML += `<option value="${p.id}">${p.nama} — ${p.jabatan}</option>`;
+  });
+}
+
+function renderPegawai() {
+  const tb = document.getElementById('tablePegawai');
+  if (!state.pegawai.length) {
+    tb.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>Belum ada pegawai terdaftar</p></div></td></tr>`;
+    return;
+  }
+  tb.innerHTML = state.pegawai.map(p => {
+    const potongan = hitungPotongan(p);
+    const final = p.tunjangan - (p.tunjangan * potongan / 100);
+    const chipClass = p.terlambatBulanIni === 0 ? 'chip-green' : p.terlambatBulanIni <= 2 ? 'chip-yellow' : 'chip-red';
+    return `<tr>
+      <td><div class="name-cell"><div class="avatar">${p.inisial}</div><div>
+        <div style="font-weight:600">${p.nama}</div>
+        <div style="font-size:12px;color:var(--muted)">${p.jabatan}</div>
+      </div></div></td>
+      <td>${p.jabatan}</td>
+      <td><span class="badge ${p.totalTerlambat===0?'badge-on-time':'badge-late-1'}">${p.totalTerlambat}x total</span></td>
+      <td><span class="stat-chip ${chipClass}">${p.terlambatBulanIni}x bulan ini</span></td>
+      <td>Rp ${p.tunjangan.toLocaleString('id-ID')}</td>
+      <td style="color:${potongan>0?'var(--red)':'var(--green)'}; font-weight:700">${potongan}%</td>
+      <td><button class="btn btn-danger" style="padding:6px 12px;font-size:12px" onclick="hapusPegawai('${p.id}')">Hapus</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ==================== REKAP ====================
+function renderRekap() {
+  const filterDate = document.getElementById('filterDate').value;
+  const data = state.absensi.filter(a => a.waktu.startsWith(filterDate));
+
+  const tb = document.getElementById('tableRekap');
+  if (!data.length) {
+    tb.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><p>Tidak ada absensi untuk tanggal ini</p></div></td></tr>`;
+  } else {
+    tb.innerHTML = data.sort((a,b) => new Date(b.waktu)-new Date(a.waktu)).map(a => {
+      const t = new Date(a.waktu).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+      let badgeClass = 'badge-on-time', badgeLabel = '✅ Tepat';
+      if (a.jenis==='masuk' && a.status==='late') {
+        badgeClass = a.menitTerlambat > 30 ? 'badge-late-2' : 'badge-late-1';
+        badgeLabel = `⏰ Terlambat`;
+      }
+      const peg = state.pegawai.find(p => p.id === a.pegawaiId);
+      const inisial = peg ? peg.inisial : a.nama.substring(0,2).toUpperCase();
+      const shiftLabel = a.shift ? (SHIFT_LABEL[a.shift] || a.shift) : '🌅 Pagi';
+      const shiftChip = a.shift==='malam' ? 'chip-blue' : a.shift==='siang' ? 'chip-yellow' : 'chip-green';
+      return `<tr>
+        <td><div class="name-cell"><div class="avatar">${inisial}</div><div>
+          <div style="font-weight:600">${a.nama}</div>
+          <div style="font-size:12px;color:var(--muted)">${a.jabatan}</div>
+        </div></div></td>
+        <td><span class="stat-chip ${shiftChip}">${shiftLabel}</span></td>
+        <td><strong>${t}</strong></td>
+        <td><span class="badge ${a.jenis==='masuk'?'badge-on-time':'badge-absent'}">${a.jenis==='masuk'?'🟢 Masuk':'🔴 Pulang'}</span></td>
+        <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+        <td style="color:${a.menitTerlambat>0?'var(--red)':'var(--muted)'}; font-weight:${a.menitTerlambat>0?700:400}">
+          ${a.menitTerlambat > 0 ? '+' + a.menitTerlambat + ' menit' : '—'}
+        </td>
+        <td><img class="photo-thumb" src="${a.foto}" onclick="showFoto('${a.id}')"></td>
+      </tr>`;
+    }).join('');
+  }
+  updateStats();
+}
+
+function updateStats() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayData = state.absensi.filter(a => a.waktu.startsWith(today) && a.jenis === 'masuk');
+  const total = state.pegawai.length;
+  const hadir = todayData.length;
+  const ontime = todayData.filter(a => a.status === 'ontime').length;
+  const late = todayData.filter(a => a.status === 'late').length;
+  const absent = Math.max(0, total - hadir);
+  document.getElementById('statHadir').textContent = hadir;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statOnTime').textContent = ontime;
+  document.getElementById('statLate').textContent = late;
+  document.getElementById('statAbsent').textContent = absent;
+  const pct = total > 0 ? (hadir / total * 100) : 0;
+  document.getElementById('barOnTime').style.width = total>0?(ontime/total*100)+'%':'0%';
+  document.getElementById('barLate').style.width = total>0?(late/total*100)+'%':'0%';
+  document.getElementById('barAbsent').style.width = total>0?(absent/total*100)+'%':'0%';
+}
+
+// ==================== TUNJANGAN ====================
+function hitungPotongan(peg) {
+  const n = peg.terlambatBulanIni || 0;
+  if (n === 0) return 0;
+  if (n <= 2) return state.settings.potongan1;
+  if (n <= 4) return state.settings.potongan2;
+  return state.settings.potongan3;
+}
+
+function renderTunjangan() {
+  const el = document.getElementById('listTunjangan');
+  if (!state.pegawai.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">💰</div><p>Belum ada data pegawai</p></div>`;
+    return;
+  }
+  el.innerHTML = state.pegawai.map(p => {
+    const pct = hitungPotongan(p);
+    const potRp = Math.round(p.tunjangan * pct / 100);
+    const final = p.tunjangan - potRp;
+    const color = pct === 0 ? 'var(--accent)' : pct < 50 ? 'var(--yellow)' : 'var(--red)';
+    const infoLate = p.terlambatBulanIni === 0
+      ? '<span class="stat-chip chip-green">Tidak ada keterlambatan</span>'
+      : `<span class="stat-chip chip-${p.terlambatBulanIni<=2?'yellow':'red'}">${p.terlambatBulanIni}x terlambat bulan ini</span>`;
+    return `<div class="tunj-row">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="avatar">${p.inisial}</div>
+        <div>
+          <div class="tunj-name">${p.nama}</div>
+          <div class="tunj-meta">${p.jabatan} &nbsp;|&nbsp; ${infoLate}</div>
+        </div>
+      </div>
+      <div class="tunj-amount">
+        ${pct > 0 ? `<div class="tunj-base">Rp ${p.tunjangan.toLocaleString('id-ID')}</div>` : ''}
+        <div class="tunj-final" style="color:${color}">Rp ${final.toLocaleString('id-ID')}</div>
+        ${pct > 0 ? `<div class="tunj-cut">Dipotong ${pct}% (Rp ${potRp.toLocaleString('id-ID')})</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ==================== FOTO MODAL ====================
+function showFoto(id) {
+  const a = state.absensi.find(x => x.id === id);
+  if (!a) return;
+  const t = new Date(a.waktu).toLocaleString('id-ID');
+  document.getElementById('modalTitle').textContent = `Foto — ${a.nama}`;
+  document.getElementById('modalImg').src = a.foto;
+  document.getElementById('modalInfo').innerHTML =
+    `<strong>${a.jenis === 'masuk' ? '🟢 Masuk' : '🔴 Pulang'}</strong> · ${t}
+    ${a.menitTerlambat > 0 ? `<br><span style="color:var(--red);font-weight:700">Terlambat ${a.menitTerlambat} menit</span>` : ''}`;
+  document.getElementById('modalFoto').classList.add('show');
+}
+function closeModal() { document.getElementById('modalFoto').classList.remove('show'); }
+
+// ==================== ALERT ====================
+function showAlert(type, msg) {
+  ['success','warning','error'].forEach(t => {
+    document.getElementById('alert'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('show');
+  });
+  const el = document.getElementById('alert'+type.charAt(0).toUpperCase()+type.slice(1));
+  const msgEl = document.getElementById('alert'+type.charAt(0).toUpperCase()+type.slice(1)+'Msg') ||
+                document.getElementById('alertMsg');
+  if (type==='success') document.getElementById('alertMsg').textContent = msg;
+  if (type==='warning') document.getElementById('alertWarnMsg').textContent = msg;
+  if (type==='error')   document.getElementById('alertErrMsg').textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+// ==================== EXPORT CSV ====================
+function exportCSV() {
+  const filterDate = document.getElementById('filterDate').value;
+  const data = state.absensi.filter(a => a.waktu.startsWith(filterDate));
+  if (!data.length) { alert('Tidak ada data untuk diekspor!'); return; }
+  const rows = [['Nama','Jabatan','Shift','Jenis','Waktu','Status','Menit Terlambat']];
+  data.forEach(a => {
+    rows.push([a.nama, a.jabatan, a.shift||'pagi', a.jenis,
+      new Date(a.waktu).toLocaleString('id-ID'),
+      a.status === 'ontime' ? 'Tepat Waktu' : 'Terlambat',
+      a.menitTerlambat]);
+  });
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `absensi_${filterDate}.csv`;
+  a.click();
+}
+
+// ==================== RESET ====================
+function resetBulanan() {
+  if (!confirm('Reset keterlambatan bulan ini? Riwayat absensi tetap tersimpan.')) return;
+  state.pegawai.forEach(p => p.terlambatBulanIni = 0);
+  saveState();
+  renderPegawai();
+  renderTunjangan();
+  alert('Keterlambatan bulan ini berhasil direset!');
+}
+
+function resetAll() {
+  if (!confirm('⚠️ HAPUS SEMUA DATA? Ini tidak dapat dibatalkan!')) return;
+  if (!confirm('Konfirmasi sekali lagi: hapus semua pegawai dan absensi?')) return;
+  state = { pegawai:[], absensi:[], settings: state.settings };
+  saveState();
+  renderSelPegawai(); renderPegawai(); renderRekap(); renderTunjangan();
+  alert('Semua data berhasil dihapus.');
+}
+
+// ==================== TABS ====================
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'rekap') renderRekap();
+  if (tab === 'tunjangan') renderTunjangan();
+  if (tab === 'pegawai') renderPegawai();
+}
+
+// Perubahan dropdown pegawai
+document.getElementById('selPegawai').addEventListener('change', updateLiveStatus);
+document.getElementById('selJenis').addEventListener('change', updateLiveStatus);
+document.getElementById('selShift').addEventListener('change', updateLiveStatus);
+
+// LOAD
+init();
+</script>
+</body>
+</html>
